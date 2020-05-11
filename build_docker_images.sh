@@ -1,1 +1,1 @@
-docker build -t gcr.io/material_xs_plotter-cloud-run/api:latest .
+docker build -t gcr.io/xsplot-cloud-run/materials:latest .
