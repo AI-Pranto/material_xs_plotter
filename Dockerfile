@@ -139,6 +139,7 @@ ENV OPENMC_CROSS_SECTIONS=/nndc-b7.1-hdf5/cross_sections.xml
 RUN pip3 install streamlit
 RUN pip3 install plotly
 
+RUN echo redownloading 
 RUN git clone https://github.com/Shimwell/material_xs_plotter.git
 
 WORKDIR material_xs_plotter

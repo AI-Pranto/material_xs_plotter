@@ -67,7 +67,7 @@ REACTION_NAME = ['MT 1 (n,total)',
                 'MT 23 (n,n3a)', 
                 'MT 24 (n,2na)', 
                 'MT 25 (n,3na)',
-                #'MT 27 (n,absorption)', 
+                'MT 27 (n,absorption)', 
                 'MT 28 (n,np)', 
                 'MT 29 (n,n2a)',
                 'MT 30 (n,2n2a)', 
@@ -172,6 +172,7 @@ REACTION_NAME = ['MT 1 (n,total)',
 
 
 element_symbols_and_values = []
+element_values = []
 for i in range(number_of_elements):
     key = key + 1
     element_symbol = st.selectbox(key = key,
@@ -184,6 +185,7 @@ for i in range(number_of_elements):
                 label='Element ' + str(i+1) + ' mass fraction')
 
     # if element_value 
+    element_values.append(element_value)
     element_symbols_and_values.append((element_symbol, element_value))
 
 density_value = st.number_input(key = key+2,
@@ -199,67 +201,83 @@ axis_scales = st.selectbox(key = key+4,
             label='Axis scale',
             options= ['linear-linear', 'log-linear', 'linear-log', 'log-log'])
 
+percent_type = st.selectbox(key = key+4,
+            label='Axis scale',
+            options= ['atom fraction', 'weight fraction'])
+
+if percent_type == 'atom fraction':
+    percent_type_symbol = 'ao'
+elif percent_type == 'weight fraction':
+    percent_type_symbol = 'wo'
+
 fig = go.Figure()
 
-if st.button('update graph'):
+if 0 in element_values:
+    st.write("elements can't have zero values")
 
-    if density_value == 0:
-        st.write('set the density value first')
+# if st.button('update graph'):
+elif number_of_elements == 0:
+    st.write('Selecte the number of elements')
 
-    else:
+elif density_value == 0:
+    st.write('set the density value first')
 
-        openmc_material = openmc.Material()
-        for element_symbol_and_value in element_symbols_and_values:
-            element_symbol = element_symbol_and_value[0]
-            element_value = element_symbol_and_value[1]
+elif len(reaction_descriptions)==0:
+    st.write('select some reactions')
 
-            if element_value == 0:
-                st.write('The element mass fraction is zero for', element_symbol)
+else:
 
+    openmc_material = openmc.Material()
+    for element_symbol_and_value in element_symbols_and_values:
+        element_symbol = element_symbol_and_value[0]
+        element_value = element_symbol_and_value[1]
 
-            openmc_material.add_element(element_symbol, element_value, 'ao')
+        if element_value == 0:
+            st.write('The element mass fraction is zero for', element_symbol)
 
-        openmc_material.set_density('g/cm3', density_value)
+        openmc_material.add_element(element_symbol, element_value, percent_type_symbol)
 
-        mt_numbers = []
-        for entry in reaction_descriptions:
-            # print(entry)
-            mt_number = int(entry.split(" ")[1])
-            if mt_number == 1:
-                mt_number='total'
-            mt_numbers.append(mt_number)
-            #mt_numbers.append(entry.split(" ")[-1])
+    openmc_material.set_density('g/cm3', density_value)
 
-        # print(openmc_material)
+    mt_numbers = []
+    for entry in reaction_descriptions:
+        # print(entry)
+        mt_number = int(entry.split(" ")[1])
+        if mt_number == 1:
+            mt_number='total'
+        mt_numbers.append(mt_number)
+        #mt_numbers.append(entry.split(" ")[-1])
 
-            # print(mt_number)
-        x_data, y_datas = openmc.calculate_cexs(openmc_material,
-                                                'material',
-                                                mt_numbers)
-        for reaction_description, y_data in zip(reaction_descriptions, y_datas):
-            if not np.any(y_data):
-                # print('all zero' , reaction_description)
-                st.write(reaction_description, ' cross section not found in material')
-            # print(y_data)
-            else:
+    # print(openmc_material)
 
-                fig.add_trace(go.Scatter(y=y_data,
-                                        x=x_data,
-                                        name= reaction_description,
-                                        mode='lines'
-                                        )
-                                )
+        # print(mt_number)
+    x_data, y_datas = openmc.calculate_cexs(openmc_material,
+                                            'material',
+                                            mt_numbers)
+    for reaction_description, y_data in zip(reaction_descriptions, y_datas):
+        if not np.any(y_data):
+            # print('all zero' , reaction_description)
+            st.write(reaction_description, ' cross section not found in material')
+        # print(y_data)
+        else:
 
-        xaxis_scale = axis_scales.split('-')[0]
-        yaxis_scale = axis_scales.split('-')[1]
+            fig.add_trace(go.Scatter(y=y_data,
+                                    x=x_data,
+                                    name= reaction_description,
+                                    mode='lines'
+                                    )
+                            )
 
-        fig.update_layout(
-            title='Material cross sections',
-            showlegend=True,
-            xaxis={'title': 'Energy (eV)', 'type': xaxis_scale},
-            yaxis={'title': 'Macroscopic Cross Section (1/cm)', 'type': yaxis_scale}
-        )
+    xaxis_scale = axis_scales.split('-')[0]
+    yaxis_scale = axis_scales.split('-')[1]
 
-        fig.update_traces(opacity=0.4)
+    fig.update_layout(
+        title='Material cross sections',
+        showlegend=True,
+        xaxis={'title': 'Energy (eV)', 'type': xaxis_scale},
+        yaxis={'title': 'Macroscopic Cross Section (1/cm)', 'type': yaxis_scale}
+    )
 
-        st.write(fig)
+    fig.update_traces(opacity=0.4)
+
+    st.write(fig)
